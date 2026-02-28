@@ -1,0 +1,11 @@
+spring:
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: false
+management:
+  health:
+    mail:
+      enabled: false
+main-service:
+  url: http://test-main-service
