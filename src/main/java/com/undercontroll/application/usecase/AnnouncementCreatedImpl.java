@@ -6,8 +6,12 @@ import com.undercontroll.domain.port.out.EmailTemplateLoader;
 import com.undercontroll.domain.events.AnnouncementCreatedEvent;
 import com.undercontroll.infrastructure.client.MainServiceClient;
 import com.undercontroll.infrastructure.client.UserDto;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -25,13 +29,23 @@ public class AnnouncementCreatedImpl implements AnnouncementCreatedPort {
 
     private static final String HTML_NAME = "announcement_created.html";
 
+    private final String contact = "contato@gmail.com";
+    private final String year = String.valueOf(LocalDateTime.now().getYear());
+    private final String websiteUrl = "IrmãosPelluci.com";
+    private final String contactUrl = "contato@contato";
+
+    @Retryable(
+            retryFor = FeignException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 2000, multiplier = 2)
+    )
     @Override
     public void execute(AnnouncementCreatedEvent event) {
         log.info("Sending emails for new announcement: {}", event.title());
 
         String template = buildTemplate(event);
 
-        List<UserDto> users = mainServiceClient.getCustomersThatHaveEmail(event.token());
+        List<UserDto> users = mainServiceClient.getCustomersThatHaveEmail("Bearer " + event.token());
 
         if (users != null) {
             for (UserDto user : users) {
@@ -49,6 +63,12 @@ public class AnnouncementCreatedImpl implements AnnouncementCreatedPort {
         }
     }
 
+    @Recover
+    public void recover(FeignException e, AnnouncementCreatedEvent event) {
+        log.error("Failed to fetch users from main-service after 3 attempts for announcement '{}': {}",
+                event.title(), e.getMessage());
+    }
+
     private String buildTemplate(AnnouncementCreatedEvent event) {
         String template = emailTemplateLoader.load(HTML_NAME);
 
@@ -57,7 +77,7 @@ public class AnnouncementCreatedImpl implements AnnouncementCreatedPort {
                 .replace("{{title}}", event.title() != null ? event.title() : "")
                 .replace("{{content}}", event.content() != null ? event.content() : "")
                 .replace("{{createdAt}}", this.formatDateTime(event.publishedAt()))
-                .replace("{{year}}", "2025");
+                .replace("{{year}}", year);
     }
 
     private String formatDateTime(LocalDateTime dateTime) {

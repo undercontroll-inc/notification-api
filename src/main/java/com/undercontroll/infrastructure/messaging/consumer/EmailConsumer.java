@@ -1,5 +1,6 @@
 package com.undercontroll.infrastructure.messaging.consumer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.undercontroll.domain.enums.EmailEventType;
 import com.undercontroll.domain.events.AnnouncementCreatedEvent;
 import com.undercontroll.domain.events.EmailEvent;
@@ -15,22 +16,17 @@ import org.springframework.stereotype.Component;
 public class EmailConsumer {
 
     private final AnnouncementCreatedPort announcementCreatedPort;
+    private final ObjectMapper objectMapper;
 
     @RabbitListener(queues = "notification.email.queue")
-    public void listen(
-            EmailEvent event
-    ) {
-        try {
-            log.info("Received a event from {}, of type {}", event.service(), event.type());
+    public void listen(EmailEvent event) {
+        log.info("Received a event from {}, of type {}", event.service(), event.type());
 
-            if(event.type().equals(EmailEventType.ANNOUNCEMENT_CREATED)) {
-                announcementCreatedPort.execute(
-                        (AnnouncementCreatedEvent) event.data()
-                );
-            }
-        } catch (ClassCastException e) {
-            log.error("Error while casting the event: {}", e.getMessage());
+        if (event.type().equals(EmailEventType.ANNOUNCEMENT_CREATED)) {
+            AnnouncementCreatedEvent announcementEvent = objectMapper.convertValue(
+                    event.data(), AnnouncementCreatedEvent.class
+            );
+            announcementCreatedPort.execute(announcementEvent);
         }
     }
-
 }

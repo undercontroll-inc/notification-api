@@ -20,11 +20,6 @@ public class JavaMailService implements EmailService {
 
     private final JavaMailSender mailSender;
 
-    private final String contact = "contato@gmail.com";
-    private final String year = String.valueOf(LocalDateTime.now().getYear());
-    private final String websiteUrl = "IrmãosPelluci.com";
-    private final String contactUrl = "contato@contato";
-
     @Value("${spring.mail.username}")
     private String from;
 
@@ -34,7 +29,7 @@ public class JavaMailService implements EmailService {
             String subject,
             String body
     ) {
-        log.info("Sending email to {}, subject {}, body {}", to, subject, body);
+        log.info("Sending email to {}, subject {}", to, subject);
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
