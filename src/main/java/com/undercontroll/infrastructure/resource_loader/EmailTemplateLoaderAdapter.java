@@ -1,6 +1,6 @@
-package com.undercontroll.infrastructure.email;
+package com.undercontroll.infrastructure.resource_loader;
 
-import com.undercontroll.domain.port.out.EmailTemplateLoader;
+import com.undercontroll.application.port.EmailTemplateLoader;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Component
-public class EmailTemplateLoaderImpl implements EmailTemplateLoader {
+public class EmailTemplateLoaderAdapter implements EmailTemplateLoader {
 
     @Override
     public String load(String name) {

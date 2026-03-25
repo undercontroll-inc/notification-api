@@ -1,8 +1,8 @@
 package com.undercontroll;
 
 import com.undercontroll.domain.events.AnnouncementCreatedEvent;
-import com.undercontroll.domain.port.in.AnnouncementCreatedPort;
-import com.undercontroll.infrastructure.client.MainServiceClient;
+import com.undercontroll.application.usecase.AnnouncementCreatedPort;
+import com.undercontroll.infrastructure.http.client.CustomersClient;
 import com.undercontroll.infrastructure.client.UserDto;
 import feign.FeignException;
 import jakarta.mail.Session;
@@ -38,7 +38,7 @@ class NotificationServiceApplicationTest {
     private JavaMailSender mailSender;
 
     @MockitoBean
-    private MainServiceClient mainServiceClient;
+    private CustomersClient customersClient;
 
     @Autowired
     private AnnouncementCreatedPort announcementCreatedPort;
@@ -59,7 +59,7 @@ class NotificationServiceApplicationTest {
                 new UserDto(1, "Alice", "alice@test.com", "Smith", null, null, null, null, null, false, false, false, "CUSTOMER"),
                 new UserDto(2, "Bob", "bob@test.com", "Jones", null, null, null, null, null, false, false, false, "CUSTOMER")
         );
-        when(mainServiceClient.getCustomersThatHaveEmail(anyString())).thenReturn(users);
+        when(customersClient.getCustomersThatHaveEmail(anyString())).thenReturn(users);
 
         AnnouncementCreatedEvent event = new AnnouncementCreatedEvent(
                 1, "New Feature", "Details here", "UPDATES", LocalDateTime.now(), "valid-token"
@@ -77,7 +77,7 @@ class NotificationServiceApplicationTest {
         List<UserDto> users = List.of(
                 new UserDto(1, "Alice", "alice@test.com", "Smith", null, null, null, null, null, false, false, false, "CUSTOMER")
         );
-        when(mainServiceClient.getCustomersThatHaveEmail(anyString()))
+        when(customersClient.getCustomersThatHaveEmail(anyString()))
                 .thenThrow(feignEx)
                 .thenThrow(feignEx)
                 .thenReturn(users);
@@ -88,7 +88,7 @@ class NotificationServiceApplicationTest {
 
         announcementCreatedPort.execute(event);
 
-        verify(mainServiceClient, times(3)).getCustomersThatHaveEmail(anyString());
+        verify(customersClient, times(3)).getCustomersThatHaveEmail(anyString());
         verify(mailSender, times(1)).send(any(MimeMessage.class));
     }
 }

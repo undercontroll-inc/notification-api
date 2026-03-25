@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.undercontroll.domain.enums.EmailEventType;
 import com.undercontroll.domain.events.AnnouncementCreatedEvent;
 import com.undercontroll.domain.events.EmailEvent;
-import com.undercontroll.domain.port.in.AnnouncementCreatedPort;
+import com.undercontroll.application.usecase.AnnouncementCreatedPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;

@@ -20,13 +20,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class JavaMailServiceTest {
+class JavaMailAdapterTest {
 
     @Mock
     private JavaMailSender mailSender;
 
     @InjectMocks
-    private JavaMailService service;
+    private JavaMailAdapter service;
 
     @BeforeEach
     void setUp() {

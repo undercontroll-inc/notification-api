@@ -1,10 +1,10 @@
-package com.undercontroll.application.usecase;
+package com.undercontroll.application.usecase.impl;
 
-import com.undercontroll.application.service.EmailService;
-import com.undercontroll.domain.port.in.AnnouncementCreatedPort;
-import com.undercontroll.domain.port.out.EmailTemplateLoader;
+import com.undercontroll.application.port.CustomersGateway;
+import com.undercontroll.application.port.EmailService;
+import com.undercontroll.application.usecase.AnnouncementCreatedPort;
+import com.undercontroll.application.port.EmailTemplateLoader;
 import com.undercontroll.domain.events.AnnouncementCreatedEvent;
-import com.undercontroll.infrastructure.client.MainServiceClient;
 import com.undercontroll.infrastructure.client.UserDto;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ public class AnnouncementCreatedImpl implements AnnouncementCreatedPort {
 
     private final EmailService emailService;
     private final EmailTemplateLoader emailTemplateLoader;
-    private final MainServiceClient mainServiceClient;
+    private final CustomersGateway customersGateway;
 
     private static final String HTML_NAME = "announcement_created.html";
 
@@ -45,9 +45,9 @@ public class AnnouncementCreatedImpl implements AnnouncementCreatedPort {
 
         String template = buildTemplate(event);
 
-        List<UserDto> users = mainServiceClient.getCustomersThatHaveEmail("Bearer " + event.token());
+        List<UserDto> users = customersGateway.getCustomersThatHaveEmail(event.token());
 
-        if (users != null) {
+        if (!users.isEmpty()) {
             for (UserDto user : users) {
                 try {
                     emailService.sendEmail(
@@ -60,6 +60,8 @@ public class AnnouncementCreatedImpl implements AnnouncementCreatedPort {
                     log.error("Failed to send email to {}", user.email(), e);
                 }
             }
+        } else {
+            log.info("Skipping work, no users found.");
         }
     }
 

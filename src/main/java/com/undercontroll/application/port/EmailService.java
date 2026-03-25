@@ -1,4 +1,4 @@
-package com.undercontroll.application.service;
+package com.undercontroll.application.port;
 
 public interface EmailService {
 

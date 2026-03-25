@@ -6,7 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.undercontroll.domain.enums.EmailEventType;
 import com.undercontroll.domain.events.AnnouncementCreatedEvent;
 import com.undercontroll.domain.events.EmailEvent;
-import com.undercontroll.domain.port.in.AnnouncementCreatedPort;
+import com.undercontroll.application.usecase.AnnouncementCreatedPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;

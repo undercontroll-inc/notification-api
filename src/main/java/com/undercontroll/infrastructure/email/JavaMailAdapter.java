@@ -1,27 +1,23 @@
 package com.undercontroll.infrastructure.email;
 
-import com.undercontroll.application.service.EmailService;
+import com.undercontroll.application.port.EmailService;
 import com.undercontroll.domain.exception.MailSendingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-
 @RequiredArgsConstructor
 @Slf4j
 @Service
-public class JavaMailService implements EmailService {
+public class JavaMailAdapter implements EmailService {
 
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
-    private String from;
+    private static final String from = "furquimmsw@gmail.com";
 
     @Override
     public void sendEmail(

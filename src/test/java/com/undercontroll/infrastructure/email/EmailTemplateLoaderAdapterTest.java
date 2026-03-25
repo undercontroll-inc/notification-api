@@ -1,13 +1,14 @@
 package com.undercontroll.infrastructure.email;
 
+import com.undercontroll.infrastructure.resource_loader.EmailTemplateLoaderAdapter;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class EmailTemplateLoaderImplTest {
+class EmailTemplateLoaderAdapterTest {
 
-    private final EmailTemplateLoaderImpl loader = new EmailTemplateLoaderImpl();
+    private final EmailTemplateLoaderAdapter loader = new EmailTemplateLoaderAdapter();
 
     @Test
     void load_shouldReturnTemplateContent_whenTemplateExists() {

@@ -1,4 +1,4 @@
-package com.undercontroll.domain.port.in;
+package com.undercontroll.application.usecase;
 
 import com.undercontroll.domain.events.AnnouncementCreatedEvent;
 

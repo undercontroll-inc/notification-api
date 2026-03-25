@@ -1,4 +1,4 @@
-package com.undercontroll.domain.port.out;
+package com.undercontroll.application.port;
 
 public interface EmailTemplateLoader {
 
