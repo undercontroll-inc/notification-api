@@ -29,10 +29,9 @@ public class AnnouncementCreatedImpl implements AnnouncementCreatedPort {
 
     private static final String HTML_NAME = "announcement_created.html";
 
-    private final String contact = "contato@gmail.com";
     private final String year = String.valueOf(LocalDateTime.now().getYear());
-    private final String websiteUrl = "IrmãosPelluci.com";
-    private final String contactUrl = "contato@contato";
+    private final String websiteUrl = "https://www.comercialirmaospelluci.com.br";
+    private final String contactUrl = "mailto:comercialirmaopeluci@gmail.com";
 
     @Retryable(
             retryFor = FeignException.class,
@@ -79,7 +78,9 @@ public class AnnouncementCreatedImpl implements AnnouncementCreatedPort {
                 .replace("{{title}}", event.title() != null ? event.title() : "")
                 .replace("{{content}}", event.content() != null ? event.content() : "")
                 .replace("{{createdAt}}", this.formatDateTime(event.publishedAt()))
-                .replace("{{year}}", year);
+                .replace("{{year}}", year)
+                .replace("{{websiteUrl}}", websiteUrl)
+                .replace("{{contactUrl}}", contactUrl);
     }
 
     private String formatDateTime(LocalDateTime dateTime) {

@@ -27,6 +27,7 @@ public class RabbitMQConfig {
     public static final String EMAIL_DLQ_ROUTING = "email.dlq";
 
     public static final String ANNOUNCEMENT_EVENTS = "announcement.*";
+    public static final String USER_EVENTS = "user.*";
 
     @Bean
     public Jackson2JsonMessageConverter jackson2JsonMessageConverter(ObjectMapper objectMapper) {
@@ -94,6 +95,14 @@ public class RabbitMQConfig {
                 .bind(emailQueue)
                 .to(notificationExchange)
                 .with(ANNOUNCEMENT_EVENTS);
+    }
+
+    @Bean
+    public Binding userCreatedBinding(Queue emailQueue, TopicExchange notificationExchange) {
+        return BindingBuilder
+                .bind(emailQueue)
+                .to(notificationExchange)
+                .with(USER_EVENTS);
     }
 
     @Bean

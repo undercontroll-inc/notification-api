@@ -69,6 +69,15 @@ class RabbitMQConfigTest {
     }
 
     @Test
+    void userCreatedBinding_shouldUseUserWildcardRoutingKey() {
+        Queue emailQueue = config.emailQueue();
+        TopicExchange exchange = config.notificationExchange();
+        Binding binding = config.userCreatedBinding(emailQueue, exchange);
+
+        assertThat(binding.getRoutingKey()).isEqualTo("user.*");
+    }
+
+    @Test
     void jackson2JsonMessageConverter_shouldNotBeNull() {
         Jackson2JsonMessageConverter converter = config.jackson2JsonMessageConverter(objectMapper);
 

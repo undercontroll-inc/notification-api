@@ -40,7 +40,7 @@ jobs:
     needs: publish
     runs-on: ubuntu-latest
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4a
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -49,10 +49,45 @@ jobs:
 
       - name: Deploy via SSM
         run: |
-          aws ssm send-command \
-            --instance-ids "${{ secrets.BACKEND_INSTANCE_ID }}" \
+          set -euo pipefail
+          INSTANCE_ID="${{ secrets.BACKEND_INSTANCE_ID }}"
+          REGION="us-east-1"
+
+          if [ -z "$INSTANCE_ID" ]; then
+            echo "BACKEND_INSTANCE_ID secret is empty." >&2
+            exit 1
+          fi
+
+          INSTANCE_STATE=$(aws ec2 describe-instances \
+            --instance-ids "$INSTANCE_ID" \
+            --region "$REGION" \
+            --query "Reservations[0].Instances[0].State.Name" \
+            --output text 2>/dev/null || true)
+
+          if [ -z "$INSTANCE_STATE" ] || [ "$INSTANCE_STATE" = "None" ] || [ "$INSTANCE_STATE" = "terminated" ]; then
+            echo "Instance '$INSTANCE_ID' not found in account/region '$REGION'. Check BACKEND_INSTANCE_ID and AWS credentials." >&2
+            exit 1
+          fi
+
+          if [ "$INSTANCE_STATE" != "running" ]; then
+            echo "Instance '$INSTANCE_ID' is in state '$INSTANCE_STATE'. Start it before deploy." >&2
+            exit 1
+          fi
+
+          SSM_PING_STATUS=$(aws ssm describe-instance-information \
+            --region "$REGION" \
+            --filters "Key=InstanceIds,Values=$INSTANCE_ID" \
+            --query "InstanceInformationList[0].PingStatus" \
+            --output text 2>/dev/null || true)
+
+          if [ "$SSM_PING_STATUS" != "Online" ]; then
+            echo "Instance '$INSTANCE_ID' is not Online in SSM (status: '$SSM_PING_STATUS'). Check IAM role and SSM agent." >&2
+            exit 1
+          fi
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --region us-east-1 \
             --comment "Deploy notification-api ${{ github.sha }}" \
             --timeout-seconds 300 \
             --parameters 'commands=[
@@ -60,9 +95,13 @@ jobs:
               "echo ${{ secrets.GH_PAT }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin",
               "mkdir -p /opt/app",
               "cat > /opt/app/.env << '\''EOF'\''",
+              "DB_HOST=${{ secrets.DB_HOST }}",
+              "DB_USERNAME=${{ secrets.DB_USERNAME }}",
+              "DB_PASSWORD=${{ secrets.DB_PASSWORD }}",
               "RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}",
               "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}",
               "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}",
+              "JWT_SECRET=${{ secrets.JWT_SECRET }}",
               "MAIL_HOST=${{ secrets.MAIL_HOST }}",
               "MAIL_PORT=${{ secrets.MAIL_PORT }}",
               "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}",
@@ -70,8 +109,47 @@ jobs:
               "EOF",
               "chmod 600 /opt/app/.env",
               "curl -fsSL -H '\''Authorization: token ${{ secrets.GH_PAT }}'\'' -H '\''Accept: application/vnd.github.v3.raw'\'' https://api.github.com/repos/undercontroll-inc/infra/contents/docker-compose.prod.yml -o /opt/app/docker-compose.yml",
-              "docker compose -f /opt/app/docker-compose.yml pull notification-service",
-              "docker compose -f /opt/app/docker-compose.yml up -d notification-service",
+              "mkdir -p /opt/app/nginx",
+              "curl -fsSL -H '\''Authorization: token ${{ secrets.GH_PAT }}'\'' -H '\''Accept: application/vnd.github.v3.raw'\'' https://api.github.com/repos/undercontroll-inc/infra/contents/nginx/backend.conf -o /opt/app/nginx/backend.conf",
+              "docker compose --env-file /opt/app/.env -f /opt/app/docker-compose.yml pull notification-service",
+              "docker compose --env-file /opt/app/.env -f /opt/app/docker-compose.yml up -d notification-service",
               "docker image prune -f"
             ]' \
-            --wait
+            --region "$REGION" \
+            --query "Command.CommandId" --output text)
+
+          echo "Sent SSM command: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --region "$REGION"
+
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --region "$REGION" \
+            --query "Status" --output text)
+
+          STDOUT=$(aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --region "$REGION" \
+            --query "StandardOutputContent" --output text)
+
+          STDERR=$(aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --region "$REGION" \
+            --query "StandardErrorContent" --output text)
+
+          echo "SSM invocation status: $STATUS"
+          echo "----- STDOUT -----"
+          echo "$STDOUT"
+          echo "----- STDERR -----"
+          echo "$STDERR"
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "SSM command did not succeed (status: $STATUS)" >&2
+            exit 1
+          fi

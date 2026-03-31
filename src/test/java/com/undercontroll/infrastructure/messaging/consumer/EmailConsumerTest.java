@@ -6,7 +6,9 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.undercontroll.domain.enums.EmailEventType;
 import com.undercontroll.domain.events.AnnouncementCreatedEvent;
 import com.undercontroll.domain.events.EmailEvent;
+import com.undercontroll.domain.events.UserCreatedEvent;
 import com.undercontroll.application.usecase.AnnouncementCreatedPort;
+import com.undercontroll.application.usecase.UserCreatedPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -27,6 +29,9 @@ class EmailConsumerTest {
 
     @Mock
     private AnnouncementCreatedPort announcementCreatedPort;
+
+    @Mock
+    private UserCreatedPort userCreatedPort;
 
     // Real ObjectMapper with JavaTimeModule so convertValue() actually works
     @Spy
@@ -76,5 +81,16 @@ class EmailConsumerTest {
                 .isInstanceOf(NullPointerException.class);
 
         verify(announcementCreatedPort, never()).execute(any());
+    }
+
+    @Test
+    void listen_shouldExecuteUserCreatedPort_whenEventTypeMatches() {
+        LocalDateTime createdAt = LocalDateTime.of(2026, 3, 30, 11, 15);
+        UserCreatedEvent data = new UserCreatedEvent("Maria", "maria@teste.com", createdAt);
+        EmailEvent event = new EmailEvent("main-service", EmailEventType.USER_CREATED, data, createdAt);
+
+        consumer.listen(event);
+
+        verify(userCreatedPort, times(1)).execute(any(UserCreatedEvent.class));
     }
 }
