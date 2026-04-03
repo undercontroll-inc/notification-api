@@ -9,22 +9,32 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: notification-api-cd-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
-  packages: write
 
 jobs:
   publish:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    env:
+      IMAGE_TAG: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+    permissions:
+      contents: read
+      packages: write
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.IMAGE_TAG }}
 
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: docker/build-push-action@v6
@@ -33,12 +43,16 @@ jobs:
           push: true
           tags: |
             ghcr.io/undercontroll-inc/notification-api:latest
-            ghcr.io/undercontroll-inc/notification-api:${{ github.sha }}
+            ghcr.io/undercontroll-inc/notification-api:${{ env.IMAGE_TAG }}
 
   deploy:
     name: Deploy to EC2
     needs: publish
     runs-on: ubuntu-latest
+    env:
+      IMAGE_TAG: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+    permissions:
+      contents: read
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -48,9 +62,13 @@ jobs:
           aws-region: us-east-1
 
       - name: Deploy via SSM
+        env:
+          BACKEND_INSTANCE_ID: ${{ vars.BACKEND_INSTANCE_ID != '' && vars.BACKEND_INSTANCE_ID || secrets.BACKEND_INSTANCE_ID }}
+          DB_HOST: ${{ vars.DB_HOST != '' && vars.DB_HOST || secrets.DB_HOST }}
+          RABBITMQ_HOST: ${{ vars.RABBITMQ_HOST != '' && vars.RABBITMQ_HOST || secrets.RABBITMQ_HOST }}
         run: |
           set -euo pipefail
-          INSTANCE_ID="${{ secrets.BACKEND_INSTANCE_ID }}"
+          INSTANCE_ID="${BACKEND_INSTANCE_ID}"
           REGION="us-east-1"
 
           if [ -z "$INSTANCE_ID" ]; then
@@ -88,17 +106,17 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy notification-api ${{ github.sha }}" \
+            --comment "Deploy notification-api ${{ env.IMAGE_TAG }}" \
             --timeout-seconds 300 \
             --parameters 'commands=[
               "set -e",
-              "echo ${{ secrets.GH_PAT }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin",
+              "echo ${{ secrets.GH_PAT }} | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin",
               "mkdir -p /opt/app",
               "cat > /opt/app/.env << '\''EOF'\''",
-              "DB_HOST=${{ secrets.DB_HOST }}",
+              "DB_HOST=${{ env.DB_HOST }}",
               "DB_USERNAME=${{ secrets.DB_USERNAME }}",
               "DB_PASSWORD=${{ secrets.DB_PASSWORD }}",
-              "RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}",
+              "RABBITMQ_HOST=${{ env.RABBITMQ_HOST }}",
               "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}",
               "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}",
               "JWT_SECRET=${{ secrets.JWT_SECRET }}",
@@ -109,6 +127,7 @@ jobs:
               "EOF",
               "chmod 600 /opt/app/.env",
               "curl -fsSL -H '\''Authorization: token ${{ secrets.GH_PAT }}'\'' -H '\''Accept: application/vnd.github.v3.raw'\'' https://api.github.com/repos/undercontroll-inc/infra/contents/docker-compose.prod.yml -o /opt/app/docker-compose.yml",
+              "sed -i '\''s|ghcr.io/undercontroll-inc/notification-api:latest|ghcr.io/undercontroll-inc/notification-api:${{ env.IMAGE_TAG }}|g'\'' /opt/app/docker-compose.yml",
               "mkdir -p /opt/app/nginx",
               "curl -fsSL -H '\''Authorization: token ${{ secrets.GH_PAT }}'\'' -H '\''Accept: application/vnd.github.v3.raw'\'' https://api.github.com/repos/undercontroll-inc/infra/contents/nginx/backend.conf -o /opt/app/nginx/backend.conf",
               "docker compose --env-file /opt/app/.env -f /opt/app/docker-compose.yml pull notification-service",
