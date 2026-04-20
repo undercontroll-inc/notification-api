@@ -81,6 +81,7 @@ jobs:
           RABBITMQ_HOST: ${{ vars.RABBITMQ_HOST != '' && vars.RABBITMQ_HOST || secrets.RABBITMQ_HOST }}
           RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}
           RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+          BASTION_HOST: ${{ vars.BASTION_HOST }}
           MAIL_HOST: ${{ secrets.MAIL_HOST }}
           MAIL_PORT: ${{ secrets.MAIL_PORT }}
           MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
@@ -92,7 +93,7 @@ jobs:
           proxy_host: ${{ vars.BASTION_HOST }}
           proxy_username: ${{ secrets.EC2_USERNAME }}
           proxy_key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
-          envs: IMAGE_TAG,GH_TOKEN,GH_PAT,GH_OWNER,RABBITMQ_HOST,RABBITMQ_USER,RABBITMQ_PASSWORD,MAIL_HOST,MAIL_PORT,MAIL_USERNAME,MAIL_PASSWORD
+          envs: IMAGE_TAG, BASTION_HOST, GH_TOKEN,GH_PAT,GH_OWNER,RABBITMQ_HOST,RABBITMQ_USER,RABBITMQ_PASSWORD,MAIL_HOST,MAIL_PORT,MAIL_USERNAME,MAIL_PASSWORD
           script: |
             set -euo pipefail
 
@@ -104,6 +105,7 @@ jobs:
             RABBITMQ_HOST=${RABBITMQ_HOST}
             RABBITMQ_USER=${RABBITMQ_USER}
             RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+            MAIN_SERVICE_HOST=${BASTION_HOST}
             MAIL_HOST=${MAIL_HOST}
             MAIL_PORT=${MAIL_PORT}
             MAIL_USERNAME=${MAIL_USERNAME}

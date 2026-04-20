@@ -10,7 +10,7 @@ spring:
     password: ${RABBITMQ_PASSWORD}
 
 main-service:
-  url: http://${MAIN_SERVICE_HOST:localhost}:8080
+  url: http://${MAIN_SERVICE_HOST}
 
 logging:
   level:
