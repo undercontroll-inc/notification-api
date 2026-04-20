@@ -22,9 +22,6 @@ services:
       timeout: 5s
       start_period: 40s
       retries: 3
-    depends_on:
-      main-service:
-        condition: service_healthy
     networks:
       - backend-network
 networks:
