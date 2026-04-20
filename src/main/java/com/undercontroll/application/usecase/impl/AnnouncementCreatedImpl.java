@@ -46,21 +46,22 @@ public class AnnouncementCreatedImpl implements AnnouncementCreatedPort {
 
         List<UserDto> users = customersGateway.getCustomersThatHaveEmail(event.token());
 
-        if (!users.isEmpty()) {
-            for (UserDto user : users) {
-                try {
-                    emailService.sendEmail(
-                            user.email(),
-                            "Novo Aviso: " + event.title(),
-                            template
-                    );
-                    log.info("Email sent to {}", user.email());
-                } catch (Exception e) {
-                    log.error("Failed to send email to {}", user.email(), e);
-                }
-            }
-        } else {
+        if (users == null || users.isEmpty()) {
             log.info("Skipping work, no users found.");
+            return;
+        }
+
+        for (UserDto user : users) {
+            try {
+                emailService.sendEmail(
+                        user.email(),
+                        "Novo Aviso: " + event.title(),
+                        template
+                );
+                log.info("Email sent to {}", user.email());
+            } catch (Exception e) {
+                log.error("Failed to send email to {}", user.email(), e);
+            }
         }
     }
 

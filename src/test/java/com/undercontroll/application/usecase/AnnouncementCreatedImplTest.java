@@ -4,7 +4,7 @@ import com.undercontroll.application.port.EmailService;
 import com.undercontroll.application.usecase.impl.AnnouncementCreatedImpl;
 import com.undercontroll.domain.events.AnnouncementCreatedEvent;
 import com.undercontroll.application.port.EmailTemplateLoader;
-import com.undercontroll.infrastructure.http.client.CustomersClient;
+import com.undercontroll.application.port.CustomersGateway;
 import com.undercontroll.infrastructure.client.UserDto;
 import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +34,7 @@ class AnnouncementCreatedImplTest {
     private EmailTemplateLoader emailTemplateLoader;
 
     @Mock
-    private CustomersClient customersClient;
+    private CustomersGateway customersGateway;
 
     @InjectMocks
     private AnnouncementCreatedImpl useCase;
@@ -55,7 +55,7 @@ class AnnouncementCreatedImplTest {
     @Test
     void execute_shouldSendEmailToEachUser_whenMultipleUsersExist() {
         AnnouncementCreatedEvent event = new AnnouncementCreatedEvent(1, "Title", "Content", "INFO", LocalDateTime.now(), "token");
-        when(customersClient.getCustomersThatHaveEmail(anyString()))
+        when(customersGateway.getCustomersThatHaveEmail(anyString()))
                 .thenReturn(List.of(makeUser("a@test.com"), makeUser("b@test.com"), makeUser("c@test.com")));
 
         useCase.execute(event);
@@ -66,7 +66,7 @@ class AnnouncementCreatedImplTest {
     @Test
     void execute_shouldUseEventTitleInEmailSubject() {
         AnnouncementCreatedEvent event = new AnnouncementCreatedEvent(1, "My Title", "Content", "INFO", LocalDateTime.now(), "token");
-        when(customersClient.getCustomersThatHaveEmail(anyString())).thenReturn(List.of(makeUser("user@test.com")));
+        when(customersGateway.getCustomersThatHaveEmail(anyString())).thenReturn(List.of(makeUser("user@test.com")));
 
         useCase.execute(event);
 
@@ -78,7 +78,7 @@ class AnnouncementCreatedImplTest {
     @Test
     void execute_shouldNotSendAnyEmail_whenUserListIsNull() {
         AnnouncementCreatedEvent event = new AnnouncementCreatedEvent(1, "Title", "Content", "INFO", LocalDateTime.now(), "token");
-        when(customersClient.getCustomersThatHaveEmail(anyString())).thenReturn(null);
+        when(customersGateway.getCustomersThatHaveEmail(anyString())).thenReturn(null);
 
         useCase.execute(event);
 
@@ -88,7 +88,7 @@ class AnnouncementCreatedImplTest {
     @Test
     void execute_shouldNotSendAnyEmail_whenUserListIsEmpty() {
         AnnouncementCreatedEvent event = new AnnouncementCreatedEvent(1, "Title", "Content", "INFO", LocalDateTime.now(), "token");
-        when(customersClient.getCustomersThatHaveEmail(anyString())).thenReturn(List.of());
+        when(customersGateway.getCustomersThatHaveEmail(anyString())).thenReturn(List.of());
 
         useCase.execute(event);
 
@@ -98,7 +98,7 @@ class AnnouncementCreatedImplTest {
     @Test
     void execute_shouldContinueSendingToRemainingUsers_whenOneEmailFails() {
         AnnouncementCreatedEvent event = new AnnouncementCreatedEvent(1, "Title", "Content", "INFO", LocalDateTime.now(), "token");
-        when(customersClient.getCustomersThatHaveEmail(anyString()))
+        when(customersGateway.getCustomersThatHaveEmail(anyString()))
                 .thenReturn(List.of(makeUser("fail@test.com"), makeUser("ok@test.com")));
         doThrow(new RuntimeException("SMTP error"))
                 .when(emailService).sendEmail(eq("fail@test.com"), anyString(), anyString());
@@ -113,7 +113,7 @@ class AnnouncementCreatedImplTest {
     void execute_shouldReplaceAllPlaceholders_inTemplate() {
         LocalDateTime publishedAt = LocalDateTime.of(2024, 3, 15, 10, 30);
         AnnouncementCreatedEvent event = new AnnouncementCreatedEvent(1, "My Title", "My Content", "UPDATES", publishedAt, "token");
-        when(customersClient.getCustomersThatHaveEmail(anyString())).thenReturn(List.of(makeUser("user@test.com")));
+        when(customersGateway.getCustomersThatHaveEmail(anyString())).thenReturn(List.of(makeUser("user@test.com")));
 
         useCase.execute(event);
 
@@ -129,7 +129,7 @@ class AnnouncementCreatedImplTest {
     @Test
     void execute_shouldReplaceNullEventFields_withEmptyStrings() {
         AnnouncementCreatedEvent event = new AnnouncementCreatedEvent(1, null, null, null, LocalDateTime.now(), "token");
-        when(customersClient.getCustomersThatHaveEmail(anyString())).thenReturn(List.of(makeUser("user@test.com")));
+        when(customersGateway.getCustomersThatHaveEmail(anyString())).thenReturn(List.of(makeUser("user@test.com")));
 
         useCase.execute(event);
 
@@ -142,7 +142,7 @@ class AnnouncementCreatedImplTest {
     void execute_shouldFormatPublishedAt_asPortugueseDateTime() {
         LocalDateTime publishedAt = LocalDateTime.of(2024, 3, 15, 10, 30);
         AnnouncementCreatedEvent event = new AnnouncementCreatedEvent(1, "Title", "Content", "INFO", publishedAt, "token");
-        when(customersClient.getCustomersThatHaveEmail(anyString())).thenReturn(List.of(makeUser("user@test.com")));
+        when(customersGateway.getCustomersThatHaveEmail(anyString())).thenReturn(List.of(makeUser("user@test.com")));
 
         useCase.execute(event);
 
@@ -156,7 +156,7 @@ class AnnouncementCreatedImplTest {
         // Template: "{{type}}|{{title}}|{{content}}|{{createdAt}}|{{year}}"
         // With null publishedAt, {{createdAt}} -> "" producing "||" between content and year
         AnnouncementCreatedEvent event = new AnnouncementCreatedEvent(1, "Title", "Content", "INFO", null, "token");
-        when(customersClient.getCustomersThatHaveEmail(anyString())).thenReturn(List.of(makeUser("user@test.com")));
+        when(customersGateway.getCustomersThatHaveEmail(anyString())).thenReturn(List.of(makeUser("user@test.com")));
 
         useCase.execute(event);
 

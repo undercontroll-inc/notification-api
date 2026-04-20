@@ -12,7 +12,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -30,7 +29,6 @@ class JavaMailAdapterTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(service, "from", "sender@test.com");
         when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
     }
 
