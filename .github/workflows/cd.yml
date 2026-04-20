@@ -55,6 +55,22 @@ jobs:
       contents: read
       packages: read
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.IMAGE_TAG }}
+
+      - name: Copy docker compose file
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ vars.NOTIFICATION_EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
+          proxy_host: ${{ vars.BASTION_HOST }}
+          proxy_username: ${{ secrets.EC2_USERNAME }}
+          proxy_key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
+          source: "docker-compose.prod.yml"
+          target: "/opt/app"
+
       - name: Deploy via SSH jump
         uses: appleboy/ssh-action@v1.2.0
         env:
@@ -95,14 +111,7 @@ jobs:
             EOF
             chmod 600 /opt/app/.env
 
-            curl -fsSL \
-              -H "Authorization: token ${GH_PAT}" \
-              -H "Accept: application/vnd.github.v3.raw" \
-              https://api.github.com/repos/undercontroll-inc/infra/contents/docker-compose.prod.yml \
-              -o /opt/app/docker-compose.yml
-
-            sed -i "s|ghcr.io/undercontroll-inc/notification-api:latest|ghcr.io/undercontroll-inc/notification-api:${IMAGE_TAG}|g" \
-              /opt/app/docker-compose.yml
+            mv /opt/app/docker-compose.prod.yml /opt/app/docker-compose.yml
 
             docker compose --env-file /opt/app/.env -f /opt/app/docker-compose.yml pull notification-service
             docker compose --env-file /opt/app/.env -f /opt/app/docker-compose.yml up -d notification-service
