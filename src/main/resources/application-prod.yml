@@ -17,7 +17,3 @@ logging:
     root: WARN
     com.undercontroll: INFO
     org.springframework.web: WARN
-  file:
-    name: /var/log/notification-service/application.log
-    max-size: 10MB
-    max-history: 30
